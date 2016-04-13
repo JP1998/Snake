@@ -18,8 +18,10 @@ import de.jeanpierrehotz.snake.parts.exceptions.SnakeHitBordersException;
 
 import de.jeanpierrehotz.ui.SnakeUI;
 
+import static de.jeanpierrehotz.snake.parts.Snake.Direction.up;
 import static de.jeanpierrehotz.snake.parts.Snake.Direction.down;
 import static de.jeanpierrehotz.snake.parts.Snake.Direction.right;
+import static de.jeanpierrehotz.snake.parts.Snake.Direction.left;
 
 import static de.jeanpierrehotz.control.SnakeControl.CauseOfPause.*;
 
@@ -65,6 +67,14 @@ public class SnakeControl{
      * Diese Variable zeigt ihnen an, ob der User in dem derzeitigen Spiel "cheatet"
      */
     private boolean cheating;
+    /**
+     * Diese Variable zeigt ihnen an, ob das Spielfeld unendlich sein soll
+     */
+    private boolean infinite;
+    /**
+     * Diese Variable zeigt ihnen an, ob das Spiel mit den üblichen Regeln abläuft.
+     */
+    private boolean withRules;
     
     /**
      * Dieser Thread ist für das Steuern des zeitlichen Ablaufs eines Spiels zuständig
@@ -98,10 +108,10 @@ public class SnakeControl{
         int vze = (gui.getHeight() - 40) / ze;   //  wenn diese  nicht quadratisch wären
         
         boolean dG = gui.shouldDrawGrid();
-        boolean inf = gui.shouldBeInfinite();
-        boolean wR = gui.shouldBeWithRules();
+        infinite = gui.shouldBeInfinite();
+        withRules = gui.shouldBeWithRules();
         
-        cheating = gui.shuldBeCheating();
+        cheating = gui.shouldBeCheating();
         
 //      
 //      Hier eine kleine Erläuterung der Berechnung der Offsets
@@ -147,35 +157,17 @@ public class SnakeControl{
         if(vsp > vze){
 //          Die Berechung beider Offsets mit dem kleineren 
 //          Wert für die Breite eines Feldteils eingesetzt
-            gui.setOffSets((gui.getWidth() - sp * vze) / 2, (gui.getHeight() - ze * vze)/ 2 + 10);
+            gui.setOffSets((gui.getWidth() - sp * vze) / 2, (gui.getHeight() - ze * vze) / 2 + 10);
             
-//          Falls der User cheaten möchte
-            if(cheating){
-//              Wird auf jeden Fall ohne Regeln und mit unendlichem Spielfeld gespielt
-//              (Letzteres ist irrelevant, da, wenn ohne Regeln gespielt 
-//              wird das Spielfeld automatisch unendlich ist)
-                init(sp, ze, vze, Direction.getRandomDirection(), false, true, dG);
-            }else{
-//              Und falls nicht werden seine gegebenen und die berechneten Werte benutzt um
-//              das Spiel nun endgültig vorzubereiten
-                init(sp, ze, vze, Direction.getRandomDirection(), wR, inf, dG);
-            }
+//          Dann wird ein Spiel mit den gegebenen und berechneten Informationen vorbereitet
+            init(sp, ze, vze, Direction.getRandomDirection(), withRules, infinite, dG);
         }else{
 //          Die Berechung beider Offsets mit dem kleineren 
 //          Wert für die Breite eines Feldteils eingesetzt
             gui.setOffSets((gui.getWidth() - sp * vsp) / 2, (gui.getHeight() - ze * vsp) / 2 + 10);
             
-//          Falls der User cheaten möchte
-            if(cheating){
-//              Wird auf jeden Fall ohne Regeln und mit unendlichem Spielfeld gespielt
-//              (Letzteres ist irrelevant, da, wenn ohne Regeln gespielt 
-//              wird das Spielfeld automatisch unendlich ist)
-                init(sp, ze, vsp, Direction.getRandomDirection(), false, true, dG);
-            }else{
-//              Und falls nicht werden seine gegebenen und die berechneten Werte benutzt um
-//              das Spiel nun endgültig vorzubereiten
-                init(sp, ze, vsp, Direction.getRandomDirection(), wR, inf, dG);
-            }
+//          Dann wird ein Spiel mit den gegebenen und berechneten Informationen vorbereitet
+            init(sp, ze, vsp, Direction.getRandomDirection(), withRules, infinite, dG);
         }
         
 //      Außerdem zeigen wir an, dass wir uns jetzt in einem Spiel befinden
@@ -292,7 +284,7 @@ public class SnakeControl{
         boolean inf = gui.shouldBeInfinite();
         boolean wR = gui.shouldBeWithRules();
         
-        cheating = gui.shuldBeCheating();
+        cheating = gui.shouldBeCheating();
         
 //      Dann die Offsets berechnet, und gespeichert
 //      Für weitere Informationen dazu siehe SnakeControl#init()
@@ -371,7 +363,7 @@ public class SnakeControl{
      * Diese Methode generiert ein neues Food-Objekt, das so gut es geht nicht innerhalb der
      * Schlange liegt.
      */
-    public void generateFood(){
+    private void generateFood(){
 //      Wir benötigen eine x- und eine y-Koordinate für das Food-Objekt,
 //      und außerdem noch einen Zähler
         int x = 0, y = 0, ctr = 0;
@@ -406,40 +398,350 @@ public class SnakeControl{
 //      Dieses lässt dann eine UI anzeigen, mit der man dann Snake spielen kann
         new SnakeControl();
     }
+    
+    /**
+     * Diese Methode lässt die Schlange sich selbstständig (abhängig von den Einstellungen) bewegen.
+     * Sie versucht sich an die Regeln so gut es geht zu halten, und das bestmögliche
+     * computer-gesteuerte Ergebnis zu erzielen.
+     * @param ctr   der Zählstand, der der Bewegung der Schlange bei Cheats hilft
+     * @return      der aktualisierte Zählstand
+     */
+    private int moveIfCheating(int ctr) {
+        int x = playingSnake.getFirstX();
+        int y = playingSnake.getFirstY();
+
+        if(withRules) {
+            if(infinite) {
+                
+                /*
+                 * Bei Regeln mit unendlicher Welt fahren wir die ganze Höhe ab (nach oben oder unten),
+                 * fahren eins nach rechts und fahren dann wieder hoch.
+                 * Diesen Prozess wiederholen wir, bis das Spiel beendet wurde.
+                 */
+                
+                if(ctr == 0) {
+                    playingSnake.changeDirectionTo(right);
+                }else if(ctr == 1) {
+                    playingSnake.changeDirectionTo(down);
+                }else if(ctr == playGrid.getHeight()) {
+                    playingSnake.changeDirectionTo(right);
+                }else if(ctr == playGrid.getHeight() + 1) {
+                    playingSnake.changeDirectionTo(up);
+                }
+
+                ctr = (ctr + 1) % (2 * playGrid.getHeight());
+            }else {
+
+                /*
+                 * Bei Regeln und endlicher Welt müssen wir zwischen drei Fällen unterscheiden:
+                 *  - Höhe ist gerade, Breite ist egal
+                 *  - Höhe ist ungerade, Breite ist gerade
+                 *  - Höhe ist ungerade, Breite ist ungerade
+                 */
+                
+                if(playGrid.getHeight() % 2 == 0) {
+                    
+                    /*
+                     * Wenn die Höhe gerade ist (Breite ist egal)
+                     */
+
+                    /*
+                     * Beim ersten Durchlauf (bei allen anderen Durchläufen ist ctr = 1)
+                     * wird die Snake in die (für ihre Position) richtige Richtung gelenkt,
+                     * um zu verhindern, dass sie auf keinen markanten Punkt trifft, und
+                     * einfach in die Wand fährt
+                     */
+                    
+                    if(ctr == 0) {
+                        ctr++;
+                        if(x == 0) {
+                            playingSnake.changeDirectionTo(up);
+                        }else if(y % 2 == 0) {
+                            playingSnake.changeDirectionTo(right);
+                        }else {
+                            playingSnake.changeDirectionTo(left);
+                        }
+                    }
+
+                    /*
+                     * Dann wird sie nach folgendem Muster bewegt (Pfeile zeigen einen besonderen
+                     * Punkt, an dem die Richtung in die von dem Pfeil angezeigte Richtung gewechselt):
+                     * 
+                     *   __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __
+                     *  |->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     *  |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     *  |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     *  |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     *  |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     *  |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     *  |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     *  |^^|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     *  
+                     */
+
+                    if(x == 0 && y == 0) {
+                        playingSnake.changeDirectionTo(right);
+                    }else if(y == playGrid.getHeight() - 1) {
+                        if(x == 0) {
+                            playingSnake.changeDirectionTo(up);
+                        }else if(x == playGrid.getWidth() - 1){
+                            playingSnake.changeDirectionTo(left);
+                        }
+                    }else if(x == playGrid.getWidth() - 1 && y % 2 == 0) {
+                        playingSnake.changeDirectionTo(down);
+                    }else if(x == playGrid.getWidth() - 1 && y % 2 == 1) {
+                        playingSnake.changeDirectionTo(left);
+                    }else if(x == 1 && y % 2 == 1) {
+                        playingSnake.changeDirectionTo(down);
+                    }else if(x == 1 && y % 2 == 0) {
+                        playingSnake.changeDirectionTo(right);
+                    }
+                }else if(playGrid.getWidth() % 2 == 0) {
+
+                    /*
+                     * Wenn die Höhe ungerade, und die Breite gerade ist
+                     */
+                    
+                    /*
+                     * Beim ersten Durchlauf (bei allen anderen Durchläufen ist ctr = 1)
+                     * wird die Snake in die (für ihre Position) richtige Richtung gelenkt,
+                     * um zu verhindern, dass sie auf keinen markanten Punkt trifft, und
+                     * einfach in die Wand fährt
+                     */
+                    
+                    if(ctr == 0) {
+                        if(x == 0) {
+                            playingSnake.changeDirectionTo(up);
+                        }else if(y == 0 || y % 2 == 1) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(y % 2 == 0) {
+                            playingSnake.changeDirectionTo(left);
+                        }
+                        ctr++;
+                    }
+
+                    /*
+                     * Dann wird sie nach folgendem Muster bewegt (Pfeile zeigen einen besonderen
+                     * Punkt, an dem die Richtung in die von dem Pfeil angezeigte Richtung gewechselt):
+                     * 
+                     *  __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __
+                     * |->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|
+                     * |__|__|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |^^|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     */
+
+
+                    if(x == 0) {
+                        if(y == 0) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(y == playGrid.getHeight() - 1) {
+                            playingSnake.changeDirectionTo(Direction.up);
+                        }
+                    }else if(y == 0) {
+                        if(x == playGrid.getWidth() - 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }
+                    }else if(y == playGrid.getHeight() - 1) {
+                        if(x == playGrid.getWidth() - 1) {
+                            playingSnake.changeDirectionTo(Direction.left);
+                        }
+                    }else if(y == 1 || y == 2) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }else if(x % 2 == 1) {
+                            if(y == 1) {
+                                playingSnake.changeDirectionTo(down);
+                            }else {
+                                playingSnake.changeDirectionTo(Direction.left);
+                            }
+                        }else {
+                            if(y == 1) {
+                                playingSnake.changeDirectionTo(Direction.left);
+                            }else {
+                                playingSnake.changeDirectionTo(Direction.up);
+                            }
+                        }
+                    }else if(y % 2 == 1) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(x == playGrid.getWidth() - 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }
+                    }else if(y % 2 == 0) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }else if(x == playGrid.getWidth() - 1) {
+                            playingSnake.changeDirectionTo(Direction.left);
+                        }
+                    }
+                }else {
+                    
+                    /*
+                     * Wenn die Höhe und die Breite ungerade sind wird in 2-Durchlauf Zyklen gearbeitet.
+                     * Dabei wird nach dem Schema gearbeitet, als wäre die Höhe ungerade und die Breite gerade.
+                     * Um dieses Schema allerdings ausführen zu können muss man eine Spalte auslassen.
+                     * Dadurch wird mit jedem Durchlauf eines Zykluses zwischen der ersten Spalte und der
+                     * letzten Spalte auslassen gewechselt.
+                     */
+                    
+                    /*
+                     * Am Punkt P(2|0) wird zwischen den auszulassenden Spalten gewechselt
+                     */
+                    
+                    if(x == 2 && y == 0) {
+                        ctr += (ctr == 1)? 1: -1;
+                    }
+                    
+                    /*
+                     * Beim ersten Durchlauf (bei allen anderen Durchläufen ist ctr =/= 0)
+                     * wird die Snake in die (für ihre Position) richtige Richtung gelenkt,
+                     * um zu verhindern, dass sie auf keinen markanten Punkt trifft, und
+                     * einfach in die Wand fährt
+                     */
+                    
+                    if(ctr == 0) {
+                        if(x == 0) {
+                            playingSnake.changeDirectionTo(Direction.up);
+                        }else if(y == 0 || y % 2 == 1) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(y % 2 == 0) {
+                            playingSnake.changeDirectionTo(Direction.left);
+                        }
+                        ctr++;
+                    }
+                    
+                    /*
+                     * Im zweiten Durchlauf wird die (imaginäre) Position der Snake verschoben, damit
+                     */
+                    
+                    else if(ctr == 2) {
+                        x--;
+                    }
+                    
+                    /*
+                     * Dann wird sie nach folgendem Muster bewegt (Pfeile zeigen einen besonderen
+                     * Punkt, an dem die Richtung in die von dem Pfeil angezeigte Richtung gewechselt):
+                     * 
+                     * Durchlauf 1 des Zyklus (ctr = 1):
+                     *  __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __
+                     * |->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|__|
+                     * |__|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|__|
+                     * |__|__|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|__|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|__|
+                     * |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|__|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|__|
+                     * |__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|__|
+                     * |__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|__|
+                     * |^^|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|__|
+                     * 
+                     * Durchlauf 2 des Zyklus (ctr = 2):
+                     *  __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __ __
+                     * |->|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|__|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|<-|vv|
+                     * |__|__|__|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|^^|<-|
+                     * |__|__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     * |__|__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |__|__|vv|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     * |__|__|->|__|__|__|__|__|__|__|__|__|__|__|__|__|vv|
+                     * |^^|__|__|__|__|__|__|__|__|__|__|__|__|__|__|__|<-|
+                     * 
+                     * Somit ist gewährleistet, dass innerhalb kurzer Zeit (eines Zykluses) das gesamte Spielfeld
+                     * abgefahren wird, und die Schlange (so gut wie möglich) nicht in sich selbst hineinfährt.
+                     * 
+                     */
+                    
+                    if((ctr == 1 && x == 0) || (ctr == 2 && x == -1)) {
+                        if(y == 0) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(y == playGrid.getHeight() - 1) {
+                            playingSnake.changeDirectionTo(Direction.up);
+                        }
+                    }else if(y == 0) {
+                        if(x == playGrid.getWidth() - 2) {
+                            playingSnake.changeDirectionTo(down);
+                        }
+                    }else if(y == playGrid.getHeight() - 1) {
+                        if(x == playGrid.getWidth() - 2) {
+                            playingSnake.changeDirectionTo(Direction.left);
+                        }
+                    }else if(y == 1 || y == 2) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }else if(x % 2 == 1) {
+                            if(y == 1) {
+                                playingSnake.changeDirectionTo(down);
+                            }else {
+                                playingSnake.changeDirectionTo(Direction.left);
+                            }
+                        }else {
+                            if(y == 1) {
+                                playingSnake.changeDirectionTo(Direction.left);
+                            }else {
+                                playingSnake.changeDirectionTo(Direction.up);
+                            }
+                        }
+                    }else if(y % 2 == 1) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(right);
+                        }else if(x == playGrid.getWidth() - 2) {
+                            playingSnake.changeDirectionTo(down);
+                        }
+                    }else if(y % 2 == 0) {
+                        if(x == 1) {
+                            playingSnake.changeDirectionTo(down);
+                        }else if(x == playGrid.getWidth() - 2) {
+                            playingSnake.changeDirectionTo(Direction.left);
+                        }
+                    }
+
+                    
+                }
+            }
+        }else {
+//          falls der Zählstand auf 0 steht
+            if(ctr == 0)
+//              wird die Schlange nach unten gesteuert
+                playingSnake.changeDirectionTo(down);
+//          falls der Zählstand auf 1 steht
+            else if(ctr == 1)
+//              wird die Schlange nach rechts gesteuert
+                playingSnake.changeDirectionTo(right);
+//              Danach wird der Zählstand erhöht, und so geteilt, 
+//                  dass er mindestens eine Zeile durchläuft, falls das 
+//                  Spielbrett breiter ist als die Schlange lang,
+//                  oder die Schlangenlänge durchläuft, falls diese länger
+//                  ist als die Spielfeldbreite
+            ctr = (ctr + 1) % 
+                    ((playGrid.getWidth() > playingSnake.getScore())? 
+                            playGrid.getWidth(): 
+                            playingSnake.getScore() + 1);
+        }
+
+        return ctr;
+    }
 
     /**
      * Diese Methode führt einen Tick des Spiels aus.<br>
      * Dieser besteht daraus das Snake-Objekt um ein Feld zu bewegen, falls das Food-Objekt
      * gefressen wurde ein neues zu generieren, falls die Schlange stirbt das Spiel
      * abzubrechen, und die UI das aktualisierte Bild ausgeben zu lassen.<br>
-     * Außerdem wird, falls gecheatet wird je nach gegebenem Zählerstand evtl.
-     * unten oder nach rechts gesteuert.<br>
-     * Dies wird so gesteuert, dass die Schlange mindestens die gesamte Zeile durchläuft
-     * (sofern der User nicht die Schlange vorher umsteuert), allerdings niemals mehr
-     * als zwei Zeilen komplett und nie mehr als drei Zeilen teilweise besetzt.
-     * @param ctr   der Zählstand, wie oft die Schlange bisher bewegt wirde
+     * Außerdem wird, falls gecheatet wird die Schlange selbstständig bewegt.
+     * @param ctr   der Zählstand, der der Bewegung der Schlange bei Cheats hilft
      * @return      der aktualisierte Zählstand
+     * @see SnakeControl#moveIfCheating(int)
      */
-    public int onTick(int ctr){
+    private int onTick(int ctr){
 //      Falls gecheatet wird
         if(cheating){
-//          und der Zählstand auf 0 steht
-            if(ctr == 0)
-//              wird die Schlange nach unten gesteuert
-                playingSnake.changeDirectionTo(down);
-//          und der Zählstand auf 1 steht
-            else if(ctr == 1)
-//              wird die Schlange nach rechts gesteuert
-                playingSnake.changeDirectionTo(right);
-//          Danach wird der Zählstand erhöht, und so geteilt, 
-//              dass er mindestens eine Zeile durchläuft, falls das 
-//              Spielbrett breiter ist als die Schlange lang,
-//              oder die Schlangenlänge durchläuft, falls diese länger
-//              ist als die Spielfeldbreite
-            ctr = (ctr + 1) % 
-                    ((playGrid.getWidth() > playingSnake.getScore())? 
-                            playGrid.getWidth(): 
-                            playingSnake.getScore() + 1);
+//          Wird die Schlange selbstständig bewegt
+            ctr = moveIfCheating(ctr);
         }
         
         try{
@@ -463,7 +765,7 @@ public class SnakeControl{
     }
 
     /**
-     * Diese Klasse entspricht einer Zeitsteuerung für den Spielablauf.<br>
+     * Diese Klasse entspricht Zeitsteuerung für den Spielablauf.<br>
      * Dieser gibt, sobald ausgeführt, (sofern nich gecheatet wird) in einem
      * von der Teilfeldgröße abhängigen zeitlichen Abstand eine Nachricht an das
      * SnakeControl-Objekt.<br>
@@ -471,7 +773,7 @@ public class SnakeControl{
      * (so gut es geht ohne zeitliche Verzögerung)
      * @author Jean-Pierre Hotz
      */
-    public class Timer implements Runnable{
+    private class Timer implements Runnable{
         @Override
         public void run(){
 //          der Zählstand, der nur für das Cheaten relevant ist
@@ -489,7 +791,7 @@ public class SnakeControl{
                 try{
 //                  Dann wird der Thread (falls nicht gecheatet wird) abhängig
 //                  von der Größe eines Teilfeldes pausiert
-                    Thread.sleep((cheating)? 0: (int) (((5 * playGrid.getSize()) / 3f) + (100f / 3f)));
+                    Thread.sleep((cheating)? (withRules)? 5: 0: (int) (((5 * playGrid.getSize()) / 3f) + (100f / 3f)));
                 }catch (InterruptedException e){
                     e.printStackTrace();
                 }

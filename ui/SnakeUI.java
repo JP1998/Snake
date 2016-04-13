@@ -16,6 +16,7 @@ import java.awt.Label;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
@@ -150,7 +151,7 @@ public class SnakeUI extends Frame{
      * Diese Methode zeigt ihnen, ob der User cheaten möchte
      * @return  ob gecheatet werden soll
      */
-    public boolean shuldBeCheating(){
+    public boolean shouldBeCheating(){
         return cheatingCheckbox.getState();
     }
     
@@ -231,9 +232,7 @@ public class SnakeUI extends Frame{
      * {@link SnakeUI#saveAndResumeAlreadyClicked} auf {@code false}.<br>
      * Damit wird die Warnung auch immer gelöscht, sobald man ein Spiel startet.
      */
-    FocusListener resumeAndSaveFocusListener = new FocusListener(){
-        @Override
-        public void focusGained(FocusEvent ev){}
+    private FocusListener resumeAndSaveFocusListener = new FocusAdapter(){
         @Override
         public void focusLost(FocusEvent ev){
             saveAndResumeAlreadyClicked = false;
@@ -252,7 +251,7 @@ public class SnakeUI extends Frame{
      * Falls nicht wird {@link SnakeUI#saveAndResumeAlreadyClicked} auf {@code true} gesetzt,
      * und die Warnung angezeigt
      */
-    ActionListener saveAndResumeActionListener = new ActionListener(){
+    private ActionListener saveAndResumeActionListener = new ActionListener(){
         @Override
         public void actionPerformed(ActionEvent ev) {
             if(saveAndResumeAlreadyClicked){
@@ -266,12 +265,12 @@ public class SnakeUI extends Frame{
             }
         }
     };
-    
+
     /**
      * Dieses SnakeControl-Objekt wird benutzt, um Nachrichten zwischen der UI und
      * der Steuerung der Steuerung auszutauschen
      */
-    SnakeControl control;
+    private SnakeControl control;
     
     /**
      * Dieser WindowListener lässt, falls noch in einem Spiel ist, das Spiel unterbrechen,
@@ -381,7 +380,7 @@ public class SnakeUI extends Frame{
         add(messageLabel);
 
         columnsChoice = new Choice();
-        for(int i = 16; i < 1570; i++){
+        for(int i = 16; i <= 320; i++){
             columnsChoice.add("" + i);
         }
         add(columnsChoice);
@@ -393,7 +392,7 @@ public class SnakeUI extends Frame{
         add(rowsLabel);
         
         rowsChoice = new Choice();
-        for(int i = 9; i < 870; i++){
+        for(int i = 9; i <= 180; i++){
             rowsChoice.add("" + i);
         }
         add(rowsChoice);

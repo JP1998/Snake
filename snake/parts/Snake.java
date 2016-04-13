@@ -33,6 +33,21 @@ public class Snake{
     private ArrayList<SnakePart> snakeParts;
     
     /**
+     * Diese Methode gibt ihnen die x-Position des "Kopfes" der Schlange
+     * @return  x-Position des Kopfes der Schlange
+     */
+    public int getFirstX(){
+       return snakeParts.get(0).getxInGrid(); 
+    }
+    /**
+     * Diese Methode gibt ihnen die y-Position des "Kopfes" der Schlange
+     * @return  y-Position des Kopfes der Schlange
+     */
+    public int getFirstY(){
+        return snakeParts.get(0).getyInGrid(); 
+     }
+    
+    /**
      * Diese Variable gibt an, in welche Richtung das Objekt gehen soll
      */
     private Direction dir;

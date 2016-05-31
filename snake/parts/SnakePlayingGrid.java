@@ -100,7 +100,9 @@ public class SnakePlayingGrid {
      * @param g     das GRaphics-Objekt, auf dem gezeichnet wird
      */
     public void drawPlayingGrid(int x, int y, Graphics g){
-//      Falls das Spielfeld gezeichnet werden soll
+//      Wir malen auf jeden Fall den Aussenrand des Spielfelds
+        g.drawRect(x, y, width * size, height * size);
+//      und falls das Spielfeld gezeichnet werden soll
         if(drawingGrid){
 //          Zeichnen wir zuerst alle vertikalen Linien,
             for(int i = 0; i <= width; i++)
